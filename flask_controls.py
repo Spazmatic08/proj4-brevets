@@ -1,6 +1,6 @@
 """
-Very simple Flask web site, with one page
-displaying a course schedule.
+Flask website created to process and display brevet control times
+based on client input
 
 """
 
@@ -64,9 +64,20 @@ def _calc_times():
   """
   app.logger.debug("Got a JSON request");
   km = request.args.get('km', 0, type=int)
-  #FIXME: These probably aren't the right open and close times
-  open_time = acp_times.open_time(km, 200, arrow.now().isoformat)
-  close_time = acp_times.close_time(km, 200, arrow.now().isoformat)
+  brev_type = request.args.get('brev_type', type=int)
+  begin_date = request.args.get('bd');   # Date as MM/DD/YYYY
+  begin_time = request.args.get('bt');   # Time on 24H clock
+
+  # Get the time in ISO-8601 format.
+  begin_ISO = arrow.get(begin_date + ":" + begin_time,
+                        'YYYY-MM-DD:HH:mm').isoformat()
+
+  print("SDATE: {}".format(begin_ISO))
+
+  open_time = acp_times.open_time(km, brev_type, begin_ISO)
+  close_time = acp_times.close_time(km, brev_type, begin_ISO)
+
+
   result={ "open": open_time, "close": close_time }
   return jsonify(result=result)
 

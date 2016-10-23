@@ -21,6 +21,11 @@
   <script 
     src="{{ url_for('static', filename="js/moment.min.js") }}"></script>
 
+  <!-- jstz permits us to retrieve the client's time zone setting -->
+  <script
+    src="https://cdnjs.cloudflare.com/ajax/libs/jstimezonedetect/1.0.6/jstz.js">
+  </script>
+
 </head>
 
    <!-- Our own style sheet -->
@@ -126,8 +131,19 @@
     var km = control.find("input[name='km']").val();
     var open_time_field = control.find("input[name='open']");
     var close_time_field = control.find("input[name='close']");
-    
-    $.getJSON(TIME_CALC_URL, { km: km }, 
+
+    var brevet_type = document.getElementById("brevet_dist_km").value;
+
+    var begin_date = document.getElementById("begin_date").value;
+    var begin_time = document.getElementById("begin_time").value;
+
+    var timezone = jstz.determine().name();
+
+    $.getJSON(TIME_CALC_URL, { km: km, 
+			       brev_type: brevet_type,
+			       bd: begin_date,
+			       bt: begin_time,
+			       tz: timezone }, 
       // response handler
       function(data) {
          var times = data.result;
