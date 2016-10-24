@@ -127,4 +127,4 @@ def find_offset( control_position, speedtype, brevet_max ):
     
     speed = limits[SpeedLimit(threshold, speedtype)]
     print(speed)
-    return float(control_position) / speed
+    return control_position / speed

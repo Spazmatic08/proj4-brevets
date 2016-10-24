@@ -63,13 +63,13 @@ def _calc_times():
   Expects one URL-encoded argument, the number of miles. 
   """
   app.logger.debug("Got a JSON request");
-  km = request.args.get('km', 0, type=int)
+  km = request.args.get('km', 0, type=float)
   brev_type = request.args.get('brev_type', type=int)
   begin_date = request.args.get('bd');   # Date as MM/DD/YYYY
   begin_time = request.args.get('bt');   # Time on 24H clock
   timezone = request.args.get('tz');     # Time zone from client settings
 
-  # Get the time in ISO-8601 format.
+  # Get the start date and time in ISO-8601 format.
   begin_ISO = arrow.get(begin_date + ":" + begin_time, 'YYYY-MM-DD:HH:mm')
   begin_ISO = begin_ISO.replace(tzinfo=timezone)
   begin_ISO = begin_ISO.isoformat()
