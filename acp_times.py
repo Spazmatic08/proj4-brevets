@@ -5,6 +5,7 @@ following rules described at https://rusa.org/octime_alg.html
 and https://rusa.org/pages/rulesForRiders
 """
 import arrow
+import math
 
 #  Note for CIS 322 Fall 2016:
 #  You MUST provide the following two functions
@@ -71,11 +72,10 @@ def open_time( control_dist_km, brevet_dist_km, brevet_start_time ):
     if control_dist_km == 0:
         return brevet_start_time  # See Exceptions
 
-    offset = find_offset(control_dist_km, 'fast', brevet_dist_km)
+    offset = find_offset(round(control_dist_km, 0), 'fast', brevet_dist_km)
 
-    result = start.replace(hours=+offset).isoformat()
+    return calc_time(offset, start)
     
-    return result
 
 def close_time( control_dist_km, brevet_dist_km, brevet_start_time ):
     """
@@ -98,9 +98,9 @@ def close_time( control_dist_km, brevet_dist_km, brevet_start_time ):
     elif control_dist_km >= 200 and brevet_dist_km == 200:
         return start.replace(hours=+13.5).isoformat()  # See Exceptions
 
-    offset = find_offset(control_dist_km, 'slow', brevet_dist_km)
-    
-    return start.replace(hours=+offset).isoformat()
+    offset = find_offset(round(control_dist_km, 0), 'slow', brevet_dist_km)
+
+    return calc_time(offset, start)
 
 def find_offset( control_position, speedtype, brevet_max ):
     """
@@ -123,8 +123,30 @@ def find_offset( control_position, speedtype, brevet_max ):
     if (control_position < brevet_max):
         threshold = max(SL[0] for SL in limits if SL[0] <= control_position)
     else:
-        threshold = max(SL[0] for SL in limits if SL[0] <= brevet_max)
+        threshold = max(SL[0] for SL in limits if SL[0] < brevet_max)
     
     speed = limits[SpeedLimit(threshold, speedtype)]
-    print(speed)
     return control_position / speed
+
+def calc_time( offset, start_time ):
+    """
+    Calculates the time based on the offset in hours, according to the RUSA
+    specifications. Returns the ISO 8601 format string representing the new
+    time.
+    """
+    # We now have the offset in hours, but due to the way that RUSA rounds
+    # these things (the sissies) there's still some bookkeeping to do. We
+    # need to seperate the offset into hours and minutes.
+
+    # Hours is easy. Just floor the offset.
+    offset_hours = math.floor(offset)
+    print("HRS_OFFSET: {}".format(offset_hours))
+
+    # Minutes, we need to take the decimal portion of offset and multiply
+    # it by 60, then round it too.
+    offset_mins = round((offset % 1) * 60.0, 0)
+    print("MIN_OFFSET: {}".format(offset_mins))
+
+    new_time = start_time.replace(hours=+offset_hours, minutes=+offset_mins)
+    
+    return new_time.isoformat()    
