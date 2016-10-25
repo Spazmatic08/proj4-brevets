@@ -29,10 +29,11 @@ from collections import namedtuple
 # control. The controls are cumulative - the first 200 km use the
 # 0-200 range, the next 200 the 200-400 range, and so on.
 
-# So if a brevet is categorized as 200 km, but the last control
-# is at 204 km, it is still treated as though it were less than
-# 200 km. If a brevet is 300 km and a control is at 200 km, it
-# is treated as though it were in the 200 - 400 range.
+# With the exceptions of 200 and 400 km brevets, the times of
+# the final control (the race's end) is treated as though it were
+# only as long as the brevet's classification. So even if the final
+# control of a 300 km brevet were at 304 km, both of the times are
+# calculated as though it were positioned at 300 km.
 
 SpeedLimit = namedtuple('SpeedLimit', ['threshold', 'speedtype'])
 
@@ -118,14 +119,10 @@ def calc_time( control_position, speedtype, brevet_max, start_time ):
     """
     # The dictionary keys are all named tuples - SpeedLimits. At their
     # 0 index, they contain the valid thresholds listed in the limits.
-    # We take the highest threshold that is less than the passed
-    # control distance, and place that in the threshold value. BUT if 
-    # the control distance is less than the brevet's maximum, we check 
-    # for a control position that is less than the brevet maxiumum to
-    # shift which range it will fall under down one category.
-
     # We want the whole list of thresholds so we can calculate the totals,
-    # so we just gather all of them.
+    # so we just gather all of them that are less than or equal to the
+    # control's position. If the control is past the brevet's end, we use
+    # the brevet as the maximum to avoid getting too high a speed category.
     if (control_position < brevet_max):
         thresholds = sorted(set(SL[0] for SL in limits.keys()
                          if SL[0] <= control_position))
@@ -138,8 +135,7 @@ def calc_time( control_position, speedtype, brevet_max, start_time ):
     max_threshold = thresholds.pop()
 
     # We now have the highest distance category of the brevet, so we need
-    # to sum the maximum from all categories before it. We initialize both
-    # hours and minutes to handle rounding issues.
+    # to sum the maximum from all categories before it. 
     result = 0.0
     temp = max_threshold
     while not not thresholds:
@@ -152,8 +148,6 @@ def calc_time( control_position, speedtype, brevet_max, start_time ):
         print("Total resulting offset: {}".format(result))
         temp = threshold
 
-    
-    
     # Now we just need whatever's left over in the highest distance category.
     # Note that if the distance is greater than the brevet length, we have to
     # cut it down to the length of the brevet itself.

@@ -1,7 +1,5 @@
 # Project 4:  Brevet time calculator with Ajax
 
-Reimplement the RUSA ACP controle time calculator with flask and ajax
-
 ## ACP controle times
 
 That's "controle" with an 'e', because it's French, although "control"
@@ -11,38 +9,60 @@ minimum and maximum times by which the rider must
 arrive at the location.   
 
 The algorithm for calculating controle times is described at
-https://rusa.org/octime_alg.html . The description is ambiguous,
-but the examples help.  Part of finishing this project is clarifying
-anything that is not clear about the requirements, and documenting it
-clearly.  
+https://rusa.org/octime_alg.html . 
 
-We are essentially replacing the calculator at
-https://rusa.org/octime_acp.html .  We can also use that calculator
-to clarify requirements and develop test data.  
+Speeds are dictated by where precisely the control in question
+is placed on the entire brevet. They are divided by thresholds,
+which must be *met* to progress to the next one, so long
+as the brevet length is shorter than the actual position of the
+control. The controls are cumulative - the first 200 km use the
+0-200 range, the next 200 the 200-400 range, and so on.
+
+With the exceptions of 200 and 400 km brevets (noted below), closing 
+controles - ones that occur at or after the brevet length - are treated
+as though the control were only as long as the brevet itself and 
+calculated in that way. A 407 km control will be different for 400 km
+brevets and 600 km ones.
+
+Brevets include a number of rules that are exceptions
+the patterns described above, They are as follows:
+*The closing time of the starting checkpoint for a brevet is
+always one hour after it opens.
+*The overall time limit for a 200 km brevet is always 13.5
+hours, regardless of the actual position of the final control.
+*The overall time limit for a 400 km brevet is always 27 hours,
+regardless of the actual position of the final control.
 
 ## AJAX and Flask reimplementation
 
 The current RUSA controle time calculator is a Perl script that takes
-an HTML form and emits a text page. The reimplementation will fill in
+an HTML form and emits a text page. The reimplementation fills in
 times as the input fields are filled.  Each time a distance is filled
-in, the corresponding open and close times should be filled in.   
+in, the corresponding open and close times should be filled in. This
+functionality is a property of the original skeleton code. Please look
+to the base project at https://github.com/UO-CIS-322/proj4-brevets for 
+more information regarding it.
 
-I will leave much of the design to you.   
+## Installation and utilization
+
+The code may be forked, cloned, and otherwise employed as any other Github
+project. Once cloned, you can change into the directory with the 'cd' 
+command and use the commands 'bash ./configure' and 'make run' to run
+the debugger version of the site. Gunicorn, if installed, can be used to
+make a more long-term version with the command 'make service'. The server
+runs on port 5000 by default, using Flask.
 
 ## Testing
 
-A suite of nose test cases is a requirement of this project.  Design
-the test cases based on an interpretation of rules at
-https://rusa.org/octime_alg.html .  Be sure to test your test
-cases:  You can use the current brevet time calculator (
-https://rusa.org/octime_acp.html ) to check that your expected test
-outputs are correct. While checking these values once is a manual
-operation, re-running your test cases should be automated in the usual
-manner as a Nose test suite.
+A suite of nose test cases has been implemented to test the algorithms used
+to calculate the open and close times of the controles. The provided suite
+tests a brevet of each type, and may be run with the 'nosetests' command.
+You must have nosetests installed to run them in that manner ('pip install
+nosetests' should work if you do not and wish to run them.)
 
-To make automated testing more practical, your open and close time
-calculations should be in a separate module.  Because I want to be 
-able to use my test suite as well as yours, I will require that 
-module be named acp_times.py and contain the two functions I have 
-included in the skeleton code (though revised, of course, to 
-return correct results). 
+## Contact Details
+
+If you have questions regarding the code, especially regarding the algorithm
+used to calculate brevet times, you can contact me through email.
+*Name: Alexander Dibb
+*Email: adibb@cs.uoregon.edu
