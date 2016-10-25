@@ -26,11 +26,11 @@ brevets and 600 km ones.
 
 Brevets include a number of rules that are exceptions
 the patterns described above, They are as follows:
-  *The closing time of the starting checkpoint for a brevet is
+* The closing time of the starting checkpoint for a brevet is
 always one hour after it opens.
-  *The overall time limit for a 200 km brevet is always 13.5
+* The overall time limit for a 200 km brevet is always 13.5
 hours, regardless of the actual position of the final control.
-  *The overall time limit for a 400 km brevet is always 27 hours,
+* The overall time limit for a 400 km brevet is always 27 hours,
 regardless of the actual position of the final control.
 
 ## AJAX and Flask reimplementation
@@ -64,5 +64,5 @@ nosetests' should work if you do not and wish to run them.)
 
 If you have questions regarding the code, especially regarding the algorithm
 used to calculate brevet times, you can contact me through email.
-  *Name: Alexander Dibb
-  *Email: adibb@cs.uoregon.edu
+* Name: Alexander Dibb
+* Email: adibb@cs.uoregon.edu
