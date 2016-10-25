@@ -25,7 +25,9 @@ from collections import namedtuple
 # Speeds are dictated by where precisely the control in question
 # is placed on the entire brevet. They are divided by thresholds,
 # which must be *met* to progress to the next one, so long
-# as the brevet length is shorter than the actual position.
+# as the brevet length is shorter than the actual position of the
+# control. The controls are cumulative - the first 200 km use the
+# 0-200 range, the next 200 the 200-400 range, and so on.
 
 # So if a brevet is categorized as 200 km, but the last control
 # is at 204 km, it is still treated as though it were less than
@@ -34,16 +36,16 @@ from collections import namedtuple
 
 SpeedLimit = namedtuple('SpeedLimit', ['threshold', 'speedtype'])
 
-limits = {SpeedLimit(threshold=0, speedtype='slow'):15,
-          SpeedLimit(threshold=0, speedtype='fast'):34,
-          SpeedLimit(threshold=200, speedtype='slow'):15,
-          SpeedLimit(threshold=200, speedtype='fast'):32,
-          SpeedLimit(threshold=400, speedtype='slow'):15,
-          SpeedLimit(threshold=400, speedtype='fast'):30,
+limits = {SpeedLimit(threshold=0, speedtype='slow'):15.0,
+          SpeedLimit(threshold=0, speedtype='fast'):34.0,
+          SpeedLimit(threshold=200, speedtype='slow'):15.0,
+          SpeedLimit(threshold=200, speedtype='fast'):32.0,
+          SpeedLimit(threshold=400, speedtype='slow'):15.0,
+          SpeedLimit(threshold=400, speedtype='fast'):30.0,
           SpeedLimit(threshold=600, speedtype='slow'):11.428,
-          SpeedLimit(threshold=600, speedtype='fast'):28,
+          SpeedLimit(threshold=600, speedtype='fast'):28.0,
           SpeedLimit(threshold=1000, speedtype='slow'):13.333,
-          SpeedLimit(threshold=1000, speedtype='fast'):26}
+          SpeedLimit(threshold=1000, speedtype='fast'):26.0}
 
 # EXCEPTIONS:
 # Because reasons, the brevets include a number of rules that supercede
@@ -53,6 +55,8 @@ limits = {SpeedLimit(threshold=0, speedtype='slow'):15,
 #   - The overall time limit for a 200 km brevet is always 13.5
 #       hours, regardless of the actual position of the final
 #       control.
+#   - The overall time limit for a 400 km brevet is always 27 hours,
+#       regardless of the actual position of the final control.
 
 def open_time( control_dist_km, brevet_dist_km, brevet_start_time ):
     """
@@ -72,9 +76,10 @@ def open_time( control_dist_km, brevet_dist_km, brevet_start_time ):
     if control_dist_km == 0:
         return brevet_start_time  # See Exceptions
 
-    offset = find_offset(round(control_dist_km, 0), 'fast', brevet_dist_km)
-
-    return calc_time(offset, start)
+    return calc_time( control_dist_km,
+                      'fast',
+                      brevet_dist_km,
+                      start )
     
 
 def close_time( control_dist_km, brevet_dist_km, brevet_start_time ):
@@ -97,56 +102,89 @@ def close_time( control_dist_km, brevet_dist_km, brevet_start_time ):
         return start.replace(hours=+1).isoformat()     # See Exceptions
     elif control_dist_km >= 200 and brevet_dist_km == 200:
         return start.replace(hours=+13.5).isoformat()  # See Exceptions
+    elif control_dist_km >= 400 and brevet_dist_km == 400:
+        return start.replace(hours=+27).isoformat()    # See Exceptions
 
-    offset = find_offset(round(control_dist_km, 0), 'slow', brevet_dist_km)
+    return calc_time( control_dist_km,
+                      'slow',
+                      brevet_dist_km,
+                      start )
 
-    return calc_time(offset, start)
-
-def find_offset( control_position, speedtype, brevet_max ):
+def calc_time( control_position, speedtype, brevet_max, start_time ):
     """
-    Takes the position of the control and the type of speed sought, and returns
-    the offset in hours those two should create from the start time based on
-    the speed limits.
-
-    If the control position exceeds the brevet type's theoretical maximum, it
-    stays in the lesser category. For instance, a 200 km brevet will not
-    gauge any control by the >= 200 km range, even if the last controls are
-    beyond 200 km.
+    Takes the characteristics of the controle position and the type of speed
+    limit sought, as well as the brevet's maximum, and returns the ISO 8601
+    format string for the time.
     """
     # The dictionary keys are all named tuples - SpeedLimits. At their
     # 0 index, they contain the valid thresholds listed in the limits.
-    # We take the highest threshold that is less than or equal to the
+    # We take the highest threshold that is less than the passed
     # control distance, and place that in the threshold value. BUT if 
     # the control distance is less than the brevet's maximum, we check 
     # for a control position that is less than the brevet maxiumum to
     # shift which range it will fall under down one category.
+
+    # We want the whole list of thresholds so we can calculate the totals,
+    # so we just gather all of them.
     if (control_position < brevet_max):
-        threshold = max(SL[0] for SL in limits if SL[0] <= control_position)
+        thresholds = sorted(set(SL[0] for SL in limits.keys()
+                         if SL[0] <= control_position))
     else:
-        threshold = max(SL[0] for SL in limits if SL[0] < brevet_max)
+        thresholds = sorted(set(SL[0] for SL in limits.keys()
+                         if SL[0] < brevet_max))
+
+    print("valid thresholds: {}".format(thresholds))
+
+    max_threshold = thresholds.pop()
+
+    # We now have the highest distance category of the brevet, so we need
+    # to sum the maximum from all categories before it. We initialize both
+    # hours and minutes to handle rounding issues.
+    result = 0.0
+    temp = max_threshold
+    while not not thresholds:
+        threshold = thresholds.pop()
+        distance = temp - threshold
+        print("Distance {} for threshold {}".format(distance, threshold))
+        speed = limits[SpeedLimit(threshold, speedtype)]
+        print("Speed tied to that threshold: {}".format(speed))
+        result += distance / speed
+        print("Total resulting offset: {}".format(result))
+        temp = threshold
+
     
-    speed = limits[SpeedLimit(threshold, speedtype)]
-    return control_position / speed
+    
+    # Now we just need whatever's left over in the highest distance category.
+    # Note that if the distance is greater than the brevet length, we have to
+    # cut it down to the length of the brevet itself.
+    if control_position >= brevet_max:
+        control_position = brevet_max
+    remaining_distance = control_position - max_threshold
+    print("Distance {} for threshold {}".format(remaining_distance, max_threshold))
+    remaining_speed = limits[SpeedLimit(max_threshold, speedtype)]
+    print("Speed tied to that threshold {}".format(remaining_speed))
 
-def calc_time( offset, start_time ):
-    """
-    Calculates the time based on the offset in hours, according to the RUSA
-    specifications. Returns the ISO 8601 format string representing the new
-    time.
-    """
-    # We now have the offset in hours, but due to the way that RUSA rounds
-    # these things (the sissies) there's still some bookkeeping to do. We
-    # need to seperate the offset into hours and minutes.
+    result += remaining_distance / remaining_speed
+    print("Total resulting offset: {}".format(result))
 
+    # Round it off to avoid numbers too generous
+    result_hours, result_mins = round_offset(result)
+    print("Rounded result: {} hours, {} minutes".format(result_hours, result_mins))
+
+    return start_time.replace(
+        hours=+result_hours,
+        minutes=+result_mins).isoformat()
+
+def round_offset( offset ):
+    """
+    Rounds a raw hours offset into hours and minutes offsets based on the
+    RUSA specifications.
+    """
     # Hours is easy. Just floor the offset.
     offset_hours = math.floor(offset)
-    print("HRS_OFFSET: {}".format(offset_hours))
 
     # Minutes, we need to take the decimal portion of offset and multiply
     # it by 60, then round it too.
     offset_mins = round((offset % 1) * 60.0, 0)
-    print("MIN_OFFSET: {}".format(offset_mins))
 
-    new_time = start_time.replace(hours=+offset_hours, minutes=+offset_mins)
-    
-    return new_time.isoformat()    
+    return offset_hours, offset_mins
